@@ -2,60 +2,155 @@
 
 namespace App\Http\Controllers\hunianwarga;
 use App\Http\Controllers\Controller;
-
+use App\Services\PayUService\Exception;
+use Illuminate\Support\Facades\Validator;
 use App\Warga;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use DataTables;
 use Auth;
-
 use Illuminate\Support\Facades\Hash;
 
 
 class WargaController extends Controller
 {
-    public function __construct()
+    // public function __construct()
+    // {
+    //     $this->middleware('auth');
+    // }
+    public function warga(Request $request)
     {
-        $this->middleware('auth');
+       $data=Warga::get();
+
+       return response()->json([
+        "status_code" => 200,
+        "data" => $data
+        // "token_type" => "Bearer",
+       ]);
+
     }
 
-    public function index(Request $request)
+    public function SearchWarga(Request $request)
     {
+    // dd($request->name);
 
+        // $request;
+    //    $data=Warga::get();
 
-        $title = ["Warga", "Warga", ""];
-        $search = $request->search;
-        $data = Warga::get();
-        // dd($data);
-
-        $data = Warga::
-                 where(function($query) use ($search)
-                {
-                    if ($search) {
-                      $query->where('code', 'like', '%'.$search.'%')
-                      ->orWhere('name', 'like', '%'.$search.'%');
-                    }
-                })
-                ->orderBy('id', 'DESC')
+       $data = Warga::where('name','LIKE','%'.$request->name.'%')
+                ->orWhere('nik','LIKE','%'.$request->name.'%')
                 ->get();
 
-        // dd($data);
-        if ($request->ajax()) {
-          return Datatables::of($data)
-                ->addIndexColumn()
+       return response()->json([
+        "status_code" => 200,
+        "data" => $data
+        // "token_type" => "Bearer",
+       ]);
 
-                ->addColumn('action', function($row){
+    }
+    public function create(Request $request)
+    {
+    $today = Carbon::today();
 
-                    $btn = '<a class="edit btn btn-icon btn-info detail-menu-btn" href="' . route('warga.edit', $row['id']) . '" data-toggle="tooltip" data-placement="top" title="Detail Data">
-                    <i class="bi bi-pencil-square" aria-hidden="true" id="detailArea"></i></a>';
+        try{
 
-                    return $btn;
-                  })
+               $this->validate($request, [
+                   'nik' => 'required|unique:warga',
+                   "name" => "required",
+                   "tanggallahir" => "required",
+                   "tempatlahir" => "required",
+                   "pekerjaan" => "required",
+                   // 'warga_lingkungan'=> 'required|in:1,0',
+                   'wargalingkungan' => 'required|not_in:null',
+               ]);
 
-                ->rawColumns(['action'])
-                ->make(true);
-      }
-      return view('warga.index',['title' => $title,]);
+               $newWarga = Warga::updateOrInsert([
+                   'id'   => $request->data_id,
+               ],[
+                   "nik" => $request->nik,
+                   "name" => $request->name,
+                   "placeofbirth" => $request->tempatlahir,
+                   "birthdate" => $request->tanggallahir,
+                   "job" => $request->pekerjaan,
+                   "iswarga_lingkungan" => $request->warga_lingkungan,
+                   'isactive'       => 1,
+                   'createdby'  => Auth::id(),
+                   'created_at'  => $today,
+               //     // 'created_at'  => $this->changeDateFormat($today),
+               ]);
+
+            // $data = Warga::find($id);
+            $data = Warga::where("nik", "=", $request->nik)
+            ->get();
+
+           return response()->json([
+            "data" => $data,
+            "message" =>"Warga has been created successfully"
+            // "token_type" => "Bearer",
+           ]);
+       }catch(Exception $e){
+
+           $msg->sts = 0;
+           $msg->msg = $e->getMessage();
+           return response()->json([
+            "data" => $data,
+            "message" =>"Warga Gagal Disimpan". $msg->msg
+            // "token_type" => "Bearer",
+           ]);
+        }
+}
+    public function update(Request $request) {
+        $today = Carbon::today();
+
+    try{
+            $request->validate(
+            [
+                // 'name' => 'required|string|max:155',
+            //   'tgl_transaksi_input'       => 'required',
+            ],
+            [
+                // 'required' => 'Kolom :attribute tidak boleh kosong.',
+                'unique' => 'Kolom :attribute sudah terdaftar.'
+            ]);
+
+            $newWarga = Warga::updateOrInsert([
+                'id'                   => $request->id
+            ],[
+                // "nik" => $request->nik,
+                "name" => $request->name,
+                "placeofbirth" => $request->tempatlahir,
+                "birthdate" => $request->tanggallahir,
+                "job" => $request->pekerjaan,
+                "iswarga_lingkungan" => $request->warga_lingkungan,
+                'isactive'       => 1,
+                'createdby'  => Auth::id(),
+                'updated_at'  => $today,
+            //     'updatedby'  => Auth::id(),
+            //     // 'updated_at'  => $this->changeDateFormat($today),
+
+            ]);
+
+
+            $data = Warga::find($request->id);
+            // $data = Warga::where("nik", "=", $request->nik)
+            // ->get();
+
+            return response()->json([
+                "data" => $data,
+                "message" =>"Warga has been updated successfully"
+                // "token_type" => "Bearer",
+            ]);
+
+        }catch(Exception $e){
+
+            $msg->sts = 0;
+            $msg->msg = $e->getMessage();
+            return response()->json([
+                "data" => $data,
+                "message" =>"Warga updated failed". $msg->msg
+                // "token_type" => "Bearer",
+            ]);
+            }
     }
     public function store(Request $request) {
     // dd($request);
@@ -72,7 +167,6 @@ class WargaController extends Controller
                 "pekerjaan" => "required",
                 // 'warga_lingkungan'=> 'required|in:1,0',
                 'warga_lingkungan' => 'required|not_in:null',
-
             ]);
         }else{
             $request->validate(
@@ -130,43 +224,47 @@ class WargaController extends Controller
           ->withErrors(['Warga Gagal Disimpan. ' . $msg->msg])
           ->withInput();
       }
-       if ($newWarga) {
-            return redirect()
-                ->route('warga.index')
-                ->with([
-                    'success' => 'New Warga has been created successfully'
-                ]);
-        } else {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with([
-                    'error' => 'Some problem occurred, please try again'
-                ]);
-        }
+
 
     }
-    public function create() {
-        $title = ["Warga", "Warga", "Create Data"];
-        return view('warga.form',['title' => $title, ]);
-
-    }
-
 
 
     public function show($id) {
-        $warga = $this->getWargaById($id);
-        return view('warga.show', ['warga' => $warga, ]);
+        // $warga = $this->getWargaById($id);
+        $data = $this->getWargaById($id);
+
+        // $time = $data->birthdate;
+        return response()->json([
+            "status_code" => 200,
+            "data" => $data
+            // "token_type" => "Bearer",
+           ]);
+        // return view('warga.show', ['warga' => $warga, ]);
     }
 
-    public function edit($id)
+    public function updateWarga($id)
     {
         $title = ["Warga", "Warga", "Edit Data"];
-        $warga = $this->getWargaById($id);
-        $time=$this->changeDateFormatShort($warga->birthdate);
-        // dd($time);
-        // dd($warga->birthdate);
-        return view('warga.form',['time' => $time,'title' => $title,'warga' => $warga, ]);
+        // $data = Warga::find($id);
+        $data = $this->getWargaById($id);
+        // $time=$this->changeDateFormatShort($warga->birthdate);
+        return response()->json([
+            "status_code" => 200,
+            "data" => $data
+            // "token_type" => "Bearer",
+           ]);
+    }
+    public function createWarga($id)
+    {
+        $title = ["Warga", "Warga", "Edit Data"];
+        // $data = Warga::find($id);
+        $data = $this->getWargaById($id);
+        // $time=$this->changeDateFormatShort($warga->birthdate);
+        return response()->json([
+            "status_code" => 200,
+            "data" => $data
+            // "token_type" => "Bearer",
+           ]);
     }
 
 
@@ -218,4 +316,3 @@ class WargaController extends Controller
 
 
     }
-

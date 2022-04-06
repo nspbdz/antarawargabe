@@ -25,5 +25,12 @@ Route::post("/login", "AuthController@login");
 Route::middleware(["auth:sanctum"])->group(function () {
   Route::get("/users", "HunianWarga\UserController@index");
 });
-// Route::get("/users", "UserController@index");
+Route::get("/wargas", "HunianWarga\WargaController@warga");
+Route::post('/search', 'HunianWarga\WargaController@SearchWarga');
+Route::get('/warga/{id}', 'HunianWarga\WargaController@show');
+// Route::get('/wargaupdate/{id}', 'HunianWarga\WargaController@updateWarga');
+// Route::get('/wargacreate', 'HunianWarga\WargaController@createWarga');
+Route::post('/createwarga', 'HunianWarga\WargaController@create');
+Route::patch('/updatewarga/{id}', 'HunianWarga\WargaController@update');
+// Route::get("/wargas", "WargaController@index");
 

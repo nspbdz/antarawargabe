@@ -7,6 +7,7 @@ use App\Project;
 use App\Role;
 use App\Access;
 use App\User;
+use App\Warga;
 use App\ProjectDetailApproval;
 
 use Illuminate\Http\Request;
@@ -25,6 +26,17 @@ class UserController extends Controller
     public function index(Request $request)
     {
        $data=User::get();
+
+       return response()->json([
+        "status_code" => 200,
+        "data" => $data
+        // "token_type" => "Bearer",
+       ]);
+
+    }
+    public function warga(Request $request)
+    {
+       $data=Warga::get();
 
        return response()->json([
         "status_code" => 200,
